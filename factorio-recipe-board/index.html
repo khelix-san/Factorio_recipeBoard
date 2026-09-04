@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Factorio Recipe Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root[data-theme="dark"] {
+    --bg: #17191b;
+    --bg-grid: #1d2023;
+    --panel: #212427;
+    --panel-2: #282c2f;
+    --border: #383d41;
+    --text: #e7e3d8;
+    --text-dim: #969aa0;
+    --accent: #e08324;
+    --accent-dim: #7a4e1c;
+    --pin-on: #e0b024;
+    --danger: #c0503f;
+    --shadow: rgba(0,0,0,0.35);
+  }
+  :root[data-theme="light"] {
+    --bg: #eae6d9;
+    --bg-grid: #f1eee3;
+    --panel: #fffdf8;
+    --panel-2: #f4f1e6;
+    --border: #d7d1bd;
+    --text: #262420;
+    --text-dim: #6c665a;
+    --accent: #c96a12;
+    --accent-dim: #f0d3ab;
+    --pin-on: #b5860b;
+    --danger: #a83f2f;
+    --shadow: rgba(60,50,30,0.12);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background:
+      linear-gradient(var(--bg-grid) 1px, transparent 1px) 0 0 / 100% 34px,
+      var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    min-height: 100vh;
+  }
+
+  h1, h2, .brand, .tab, .badge, .stat-num {
+    font-family: 'Rajdhani', 'Inter', system-ui, sans-serif;
+  }
+
+  header.top {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--panel);
+    border-bottom: 3px solid var(--accent);
+    box-shadow: 0 4px 14px var(--shadow);
+  }
+
+  .top-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+
+  .brand {
+    font-weight: 700;
+    font-size: 1.5rem;
+    letter-spacing: 0.5px;
+    color: var(--text);
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .brand .cog {
+    color: var(--accent);
+    font-size: 1.4rem;
+    animation: spin 12s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
+
+  .search-wrap {
+    flex: 1 1 260px;
+    min-width: 200px;
+    position: relative;
+  }
+  .search-wrap input {
+    width: 100%;
+    padding: 10px 14px 10px 36px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--panel-2);
+    color: var(--text);
+    font-size: 0.95rem;
+    font-family: inherit;
+  }
+  .search-wrap input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .search-wrap::before {
+    content: "⌕";
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-dim);
+    font-size: 1.1rem;
+  }
+
+  .theme-btn {
+    border: 1px solid var(--border);
+    background: var(--panel-2);
+    color: var(--text);
+    padding: 9px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .theme-btn:hover { border-color: var(--accent); }
+
+  nav.tabs {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    border-top: 1px solid var(--border);
+  }
+  .tab {
+    padding: 10px 16px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--text-dim);
+    font-weight: 600;
+    font-size: 1rem;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+  .tab .count {
+    color: var(--text-dim);
+    font-weight: 500;
+    font-size: 0.8rem;
+    margin-left: 4px;
+  }
+
+  main {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .toolbar .stat-num { color: var(--accent); font-weight: 700; }
+  .toolbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn-sm {
+    border: 1px solid var(--border);
+    background: var(--panel-2);
+    color: var(--text-dim);
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 0.82rem;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn-sm:hover { color: var(--text); border-color: var(--accent); }
+  .btn-sm.danger:hover { color: var(--danger); border-color: var(--danger); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: border-color .15s, transform .1s;
+  }
+  .card.pinned { border-left-color: var(--pin-on); }
+  .card:hover { border-color: var(--accent); }
+  .card.highlight {
+    animation: pulse-highlight 1.6s ease-out;
+  }
+  @keyframes pulse-highlight {
+    0% { background: var(--panel-2); border-color: var(--accent); }
+    100% { background: var(--panel); border-color: var(--border); }
+  }
+
+  .card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .card-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .card-title { font-weight: 600; font-size: 1.02rem; line-height: 1.25; }
+  .title-icon {
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+  }
+
+  .pin-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px;
+    flex-shrink: 0;
+    color: var(--text-dim);
+  }
+  .pin-btn svg { width: 20px; height: 20px; display: block; }
+  .pin-btn.active { color: var(--pin-on); }
+  .pin-btn:hover { color: var(--accent); }
+
+  .meta-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    font-size: 0.72rem;
+  }
+  .badge {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 2px 8px;
+    border-radius: 20px;
+    letter-spacing: 0.3px;
+  }
+  .badge.time { color: var(--accent); border-color: var(--accent-dim); }
+
+  .flow {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border-top: 1px dashed var(--border);
+    padding-top: 8px;
+  }
+  .flow-section { display: flex; flex-direction: column; gap: 3px; }
+  .flow-label {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-dim);
+    opacity: 0.7;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .flow-label .arrow { color: var(--accent); font-weight: 700; }
+  .item-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    line-height: 1.3;
+  }
+  .item-line.product { color: var(--text); font-weight: 500; }
+  .item-line.linkable {
+    cursor: pointer;
+    border-radius: 4px;
+    margin: -2px -4px;
+    padding: 2px 4px;
+  }
+  .item-line.linkable:hover, .item-line.linkable:focus-visible {
+    background: var(--panel-2);
+    color: var(--accent);
+    outline: none;
+  }
+  .item-line.linkable:hover span:last-child, .item-line.linkable:focus-visible span:last-child {
+    text-decoration: underline;
+  }
+  .item-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    background-image: url('icons.webp');
+    background-repeat: no-repeat;
+    border-radius: 3px;
+    image-rendering: -webkit-optimize-contrast;
+  }
+  .item-icon.missing {
+    background-image: none;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+  }
+  .flow .machines { font-size: 0.72rem; opacity: 0.75; padding-top: 2px; }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-dim);
+  }
+  .empty-state .big { font-size: 2.2rem; margin-bottom: 8px; }
+
+  footer {
+    max-width: 1280px;
+    margin: 30px auto 40px;
+    padding: 0 20px;
+    color: var(--text-dim);
+    font-size: 0.78rem;
+    line-height: 1.6;
+  }
+  footer a { color: var(--accent); }
+
+  #file-input { display: none; }
+
+  @media (max-width: 640px) {
+    .brand span.full { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="brand"><span class="cog">⚙</span><span class="full">Factorio Recipe Board</span></div>
+    <div class="search-wrap">
+      <input type="text" id="search" placeholder="Cerca per nome ricetta…" autocomplete="off">
+    </div>
+    <button class="theme-btn" id="theme-toggle">🌙 <span id="theme-label">Scuro</span></button>
+  </div>
+  <nav class="tabs" id="tabs"></nav>
+</header>
+
+<main>
+  <div class="toolbar">
+    <div><span class="stat-num" id="visible-count">0</span> ricette</div>
+    <div class="toolbar-actions">
+      <button class="btn-sm" id="export-btn">⭳ Esporta preferiti (JSON)</button>
+      <button class="btn-sm" id="import-btn">⭱ Importa preferiti (JSON)</button>
+      <button class="btn-sm danger" id="clear-btn">✕ Svuota preferiti</button>
+      <input type="file" id="file-input" accept="application/json">
+    </div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <div class="empty-state" id="empty-state" style="display:none">
+    <div class="big">🔧</div>
+    <div>Nessuna ricetta trovata.</div>
+  </div>
+</main>
+
+<footer>
+  Dati ricette: Factorio 2.0 (base game, esclude l'espansione Space Age e le tecnologie di ricerca) —
+  214 ricette suddivise nelle categorie del gioco (Logistics, Production, Intermediate products, Combat, Fluids).
+  Sorgente: <a href="https://github.com/factoriolab/factoriolab" target="_blank" rel="noopener">factoriolab</a> (a sua volta basato sui file di gioco ufficiali).
+  I preferiti sono salvati automaticamente nel browser (localStorage) e possono anche essere esportati/importati come file JSON.
+</footer>
+
+<script id="recipes-csv-fallback" type="text/csv">
+id,nome,categoria,tempo_secondi,ingredienti,prodotti,macchine
+wooden-chest,Wooden chest,Logistics,0.5,Wood x2,Wooden chest x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+iron-chest,Iron chest,Logistics,0.5,Iron plate x8,Iron chest x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+steel-chest,Steel chest,Logistics,0.5,Steel plate x8,Steel chest x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+storage-tank,Storage tank,Logistics,3,Iron plate x20; Steel plate x5,Storage tank x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+transport-belt,Transport belt,Logistics,0.5,Iron plate x1; Iron gear wheel x1,Transport belt x2,assembling-machine-1; assembling-machine-2; assembling-machine-3
+fast-transport-belt,Fast transport belt,Logistics,0.5,Iron gear wheel x5; Transport belt x1,Fast transport belt x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+express-transport-belt,Express transport belt,Logistics,0.5,Iron gear wheel x10; Fast transport belt x1; Lubricant x20,Express transport belt x1,assembling-machine-2; assembling-machine-3
+underground-belt,Underground belt,Logistics,1,Iron plate x10; Transport belt x5,Underground belt x2,assembling-machine-1; assembling-machine-2; assembling-machine-3
+fast-underground-belt,Fast underground belt,Logistics,2,Iron gear wheel x40; Underground belt x2,Fast underground belt x2,assembling-machine-1; assembling-machine-2; assembling-machine-3
+express-underground-belt,Express underground belt,Logistics,2,Iron gear wheel x80; Fast underground belt x2; Lubricant x40,Express underground belt x2,assembling-machine-2; assembling-machine-3
+splitter,Splitter,Logistics,1,Electronic circuit x5; Iron plate x5; Transport belt x4,Splitter x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+fast-splitter,Fast splitter,Logistics,2,Splitter x1; Iron gear wheel x10; Electronic circuit x10,Fast splitter x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+express-splitter,Express splitter,Logistics,2,Fast splitter x1; Iron gear wheel x10; Advanced circuit x10; Lubricant x80,Express splitter x1,assembling-machine-2; assembling-machine-3
+burner-inserter,Burner inserter,Logistics,0.5,Iron plate x1; Iron gear wheel x1,Burner inserter x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+inserter,Inserter,Logistics,0.5,Electronic circuit x1; Iron gear wheel x1; Iron plate x1,Inserter x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+long-handed-inserter,Long-handed inserter,Logistics,0.5,Iron gear wheel x1; Iron plate x1; Inserter x1,Long-handed inserter x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+fast-inserter,Fast inserter,Logistics,0.5,Electronic circuit x2; Iron plate x2; Inserter x1,Fast inserter x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+bulk-inserter,Bulk inserter,Logistics,0.5,Iron gear wheel x15; Electronic circuit x15; Advanced circuit x1; Fast inserter x1,Bulk inserter x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+small-electric-pole,Small electric pole,Logistics,0.5,Wood x1; Copper cable x2,Small electric pole x2,assembling-machine-1; assembling-machine-2; assembling-machine-3
+medium-electric-pole,Medium electric pole,Logistics,0.5,Iron stick x4; Steel plate x2; Copper cable x2,Medium electric pole x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+big-electric-pole,Big electric pole,Logistics,0.5,Iron stick x8; Steel plate x5; Copper cable x4,Big electric pole x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+substation,Substation,Logistics,0.5,Steel plate x10; Advanced circuit x5; Copper cable x6,Substation x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+pipe,Pipe,Logistics,0.5,Iron plate x1,Pipe x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+pipe-to-ground,Pipe to ground,Logistics,0.5,Pipe x10; Iron plate x5,Pipe to ground x2,assembling-machine-1; assembling-machine-2; assembling-machine-3
+pump,Pump,Logistics,2,Engine unit x1; Steel plate x1; Pipe x1,Pump x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+rail,Rail,Logistics,0.5,Stone x1; Iron stick x1; Steel plate x1,Rail x2,assembling-machine-1; assembling-machine-2; assembling-machine-3
+train-stop,Train stop,Logistics,0.5,Electronic circuit x5; Iron plate x6; Iron stick x6; Steel plate x3,Train stop x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+rail-signal,Rail signal,Logistics,0.5,Electronic circuit x1; Iron plate x5,Rail signal x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+rail-chain-signal,Rail chain signal,Logistics,0.5,Electronic circuit x1; Iron plate x5,Rail chain signal x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+locomotive,Locomotive,Logistics,4,Engine unit x20; Electronic circuit x10; Steel plate x30,Locomotive x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+cargo-wagon,Cargo wagon,Logistics,1,Iron gear wheel x10; Iron plate x20; Steel plate x20,Cargo wagon x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+fluid-wagon,Fluid wagon,Logistics,1.5,Iron gear wheel x10; Steel plate x16; Pipe x8; Storage tank x1,Fluid wagon x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+artillery-wagon,Artillery wagon,Logistics,4,Engine unit x64; Iron gear wheel x10; Steel plate x40; Pipe x16; Advanced circuit x20,Artillery wagon x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+car,Car,Logistics,2,Engine unit x8; Iron plate x20; Steel plate x5,Car x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+tank,Tank,Logistics,5,Engine unit x32; Steel plate x50; Iron gear wheel x15; Advanced circuit x10,Tank x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+spidertron,Spidertron,Logistics,10,Exoskeleton x4; Portable fission reactor x2; Rocket launcher x4; Processing unit x16; Low density structure x150; Radar x2; Efficiency module 3 x2; Raw fish x1,Spidertron x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+logistic-robot,Logistic robot,Logistics,0.5,Flying robot frame x1; Advanced circuit x2,Logistic robot x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+construction-robot,Construction robot,Logistics,0.5,Flying robot frame x1; Electronic circuit x2,Construction robot x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+active-provider-chest,Active provider chest,Logistics,0.5,Steel chest x1; Electronic circuit x3; Advanced circuit x1,Active provider chest x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+passive-provider-chest,Passive provider chest,Logistics,0.5,Steel chest x1; Electronic circuit x3; Advanced circuit x1,Passive provider chest x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+storage-chest,Storage chest,Logistics,0.5,Steel chest x1; Electronic circuit x3; Advanced circuit x1,Storage chest x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+buffer-chest,Buffer chest,Logistics,0.5,Steel chest x1; Electronic circuit x3; Advanced circuit x1,Buffer chest x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+requester-chest,Requester chest,Logistics,0.5,Steel chest x1; Electronic circuit x3; Advanced circuit x1,Requester chest x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+roboport,Roboport,Logistics,5,Steel plate x45; Iron gear wheel x45; Advanced circuit x45,Roboport x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+small-lamp,Lamp,Logistics,0.5,Electronic circuit x1; Copper cable x3; Iron plate x1,Lamp x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+arithmetic-combinator,Arithmetic combinator,Logistics,0.5,Copper cable x5; Electronic circuit x5,Arithmetic combinator x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+decider-combinator,Decider combinator,Logistics,0.5,Copper cable x5; Electronic circuit x5,Decider combinator x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+selector-combinator,Selector combinator,Logistics,0.5,Advanced circuit x2; Decider combinator x5,Selector combinator x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+constant-combinator,Constant combinator,Logistics,0.5,Copper cable x5; Electronic circuit x2,Constant combinator x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+power-switch,Power switch,Logistics,2,Iron plate x5; Copper cable x5; Electronic circuit x2,Power switch x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+programmable-speaker,Programmable speaker,Logistics,2,Iron plate x3; Iron stick x4; Copper cable x5; Electronic circuit x4,Programmable speaker x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+display-panel,Display panel,Logistics,0.5,Iron plate x1; Electronic circuit x1,Display panel x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+stone-brick,Stone brick,Logistics,3.2,Stone x2,Stone brick x1,stone-furnace; steel-furnace; electric-furnace
+concrete,Concrete,Logistics,10,Stone brick x5; Iron ore x1; Water x100,Concrete x10,assembling-machine-2; assembling-machine-3
+hazard-concrete,Hazard concrete,Logistics,0.25,Concrete x10,Hazard concrete x10,assembling-machine-1; assembling-machine-2; assembling-machine-3
+refined-concrete,Refined concrete,Logistics,15,Concrete x20; Iron stick x8; Steel plate x1; Water x100,Refined concrete x10,assembling-machine-2; assembling-machine-3
+refined-hazard-concrete,Refined hazard concrete,Logistics,0.25,Refined concrete x10,Refined hazard concrete x10,assembling-machine-1; assembling-machine-2; assembling-machine-3
+landfill,Landfill,Logistics,0.5,Stone x50,Landfill x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+cliff-explosives,Cliff explosives,Logistics,8,Explosives x10; Grenade x1; Barrel x1,Cliff explosives x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+repair-pack,Repair pack,Production,0.5,Electronic circuit x2; Iron gear wheel x2,Repair pack x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+boiler,Boiler,Production,0.5,Stone furnace x1; Pipe x4,Boiler x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+steam-engine,Steam engine,Production,0.5,Iron gear wheel x8; Pipe x5; Iron plate x10,Steam engine x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+solar-panel,Solar panel,Production,10,Steel plate x5; Electronic circuit x15; Copper plate x5,Solar panel x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+accumulator,Accumulator,Production,10,Iron plate x2; Battery x5,Accumulator x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+nuclear-reactor,Nuclear reactor,Production,8,Concrete x500; Steel plate x500; Advanced circuit x500; Copper plate x500,Nuclear reactor x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+heat-pipe,Heat pipe,Production,1,Steel plate x10; Copper plate x20,Heat pipe x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+heat-exchanger,Heat exchanger,Production,3,Steel plate x10; Copper plate x100; Pipe x10,Heat exchanger x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+steam-turbine,Steam turbine,Production,3,Iron gear wheel x50; Copper plate x50; Pipe x20,Steam turbine x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+burner-mining-drill,Burner mining drill,Production,2,Iron gear wheel x3; Stone furnace x1; Iron plate x3,Burner mining drill x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+electric-mining-drill,Electric mining drill,Production,2,Electronic circuit x3; Iron gear wheel x5; Iron plate x10,Electric mining drill x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+offshore-pump,Offshore pump,Production,0.5,Pipe x3; Iron gear wheel x2,Offshore pump x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+pumpjack,Pumpjack,Production,5,Steel plate x5; Iron gear wheel x10; Electronic circuit x5; Pipe x10,Pumpjack x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+stone-furnace,Stone furnace,Production,0.5,Stone x5,Stone furnace x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+steel-furnace,Steel furnace,Production,3,Steel plate x6; Stone brick x10,Steel furnace x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+electric-furnace,Electric furnace,Production,5,Steel plate x10; Advanced circuit x5; Stone brick x10,Electric furnace x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+assembling-machine-1,Assembling machine 1,Production,0.5,Electronic circuit x3; Iron gear wheel x5; Iron plate x9,Assembling machine 1 x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+assembling-machine-2,Assembling machine 2,Production,0.5,Steel plate x2; Electronic circuit x3; Iron gear wheel x5; Assembling machine 1 x1,Assembling machine 2 x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+assembling-machine-3,Assembling machine 3,Production,0.5,Speed module x4; Assembling machine 2 x2,Assembling machine 3 x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+oil-refinery,Oil refinery,Production,8,Steel plate x15; Iron gear wheel x10; Stone brick x10; Electronic circuit x10; Pipe x10,Oil refinery x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+chemical-plant,Chemical plant,Production,5,Steel plate x5; Iron gear wheel x5; Electronic circuit x5; Pipe x5,Chemical plant x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+centrifuge,Centrifuge,Production,4,Concrete x100; Steel plate x50; Advanced circuit x100; Iron gear wheel x100,Centrifuge x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+lab,Lab,Production,2,Electronic circuit x10; Iron gear wheel x10; Transport belt x4,Lab x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+beacon,Beacon,Production,15,Electronic circuit x20; Advanced circuit x20; Steel plate x10; Copper cable x10,Beacon x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+speed-module,Speed module,Production,15,Advanced circuit x5; Electronic circuit x5,Speed module x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+speed-module-2,Speed module 2,Production,30,Speed module x4; Advanced circuit x5; Processing unit x5,Speed module 2 x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+speed-module-3,Speed module 3,Production,60,Speed module 2 x4; Advanced circuit x5; Processing unit x5,Speed module 3 x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+efficiency-module,Efficiency module,Production,15,Advanced circuit x5; Electronic circuit x5,Efficiency module x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+efficiency-module-2,Efficiency module 2,Production,30,Efficiency module x4; Advanced circuit x5; Processing unit x5,Efficiency module 2 x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+efficiency-module-3,Efficiency module 3,Production,60,Efficiency module 2 x4; Advanced circuit x5; Processing unit x5,Efficiency module 3 x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+productivity-module,Productivity module,Production,15,Advanced circuit x5; Electronic circuit x5,Productivity module x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+productivity-module-2,Productivity module 2,Production,30,Productivity module x4; Advanced circuit x5; Processing unit x5,Productivity module 2 x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+productivity-module-3,Productivity module 3,Production,60,Productivity module 2 x4; Advanced circuit x5; Processing unit x5,Productivity module 3 x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+rocket-silo,Rocket silo,Production,30,Steel plate x1000; Concrete x1000; Pipe x100; Processing unit x200; Electric engine unit x200,Rocket silo x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+cargo-landing-pad,Cargo landing pad,Production,30,Concrete x200; Steel plate x25; Processing unit x10,Cargo landing pad x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+satellite,Satellite,Production,5,Low density structure x100; Solar panel x100; Accumulator x100; Radar x5; Processing unit x100; Rocket fuel x50,Satellite x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+basic-oil-processing,Basic oil processing,Intermediate products,5,Crude oil x100,Petroleum gas x45,oil-refinery
+advanced-oil-processing,Advanced oil processing,Intermediate products,5,Water x50; Crude oil x100,Heavy oil x25; Light oil x45; Petroleum gas x55,oil-refinery
+coal-liquefaction,Coal liquefaction,Intermediate products,5,Coal x10; Heavy oil x25; Steam (165°C) x50,Heavy oil x90; Light oil x20; Petroleum gas x10,oil-refinery
+coal-liquefaction-steam-500,Coal liquefaction,Intermediate products,5,Coal x10; Heavy oil x25; Steam (500°C) x50,Heavy oil x90; Light oil x20; Petroleum gas x10,oil-refinery
+heavy-oil-cracking,Heavy oil cracking to light oil,Intermediate products,2,Water x30; Heavy oil x40,Light oil x30,chemical-plant
+light-oil-cracking,Light oil cracking to petroleum gas,Intermediate products,2,Water x30; Light oil x30,Petroleum gas x20,chemical-plant
+solid-fuel-from-petroleum-gas,Solid fuel from petroleum gas,Intermediate products,1,Petroleum gas x20,Solid fuel x1,chemical-plant
+solid-fuel-from-light-oil,Solid fuel from light oil,Intermediate products,1,Light oil x10,Solid fuel x1,chemical-plant
+solid-fuel-from-heavy-oil,Solid fuel from heavy oil,Intermediate products,1,Heavy oil x20,Solid fuel x1,chemical-plant
+lubricant,Lubricant,Intermediate products,1,Heavy oil x10,Lubricant x10,chemical-plant
+sulfuric-acid,Sulfuric acid,Intermediate products,1,Sulfur x5; Iron plate x1; Water x100,Sulfuric acid x50,chemical-plant
+iron-plate,Iron plate,Intermediate products,3.2,Iron ore x1,Iron plate x1,stone-furnace; steel-furnace; electric-furnace
+copper-plate,Copper plate,Intermediate products,3.2,Copper ore x1,Copper plate x1,stone-furnace; steel-furnace; electric-furnace
+steel-plate,Steel plate,Intermediate products,16,Iron plate x5,Steel plate x1,stone-furnace; steel-furnace; electric-furnace
+plastic-bar,Plastic bar,Intermediate products,1,Petroleum gas x20; Coal x1,Plastic bar x2,chemical-plant
+sulfur,Sulfur,Intermediate products,1,Water x30; Petroleum gas x30,Sulfur x2,chemical-plant
+battery,Battery,Intermediate products,4,Sulfuric acid x20; Iron plate x1; Copper plate x1,Battery x1,chemical-plant
+explosives,Explosives,Intermediate products,4,Sulfur x1; Coal x1; Water x10,Explosives x2,chemical-plant
+water-barrel,Fill Water barrel,Intermediate products,0.2,Water x50; Barrel x1,Water barrel x1,assembling-machine-2; assembling-machine-3
+crude-oil-barrel,Fill Crude oil barrel,Intermediate products,0.2,Crude oil x50; Barrel x1,Crude oil barrel x1,assembling-machine-2; assembling-machine-3
+petroleum-gas-barrel,Fill Petroleum gas barrel,Intermediate products,0.2,Petroleum gas x50; Barrel x1,Petroleum gas barrel x1,assembling-machine-2; assembling-machine-3
+light-oil-barrel,Fill Light oil barrel,Intermediate products,0.2,Light oil x50; Barrel x1,Light oil barrel x1,assembling-machine-2; assembling-machine-3
+heavy-oil-barrel,Fill Heavy oil barrel,Intermediate products,0.2,Heavy oil x50; Barrel x1,Heavy oil barrel x1,assembling-machine-2; assembling-machine-3
+lubricant-barrel,Fill Lubricant barrel,Intermediate products,0.2,Lubricant x50; Barrel x1,Lubricant barrel x1,assembling-machine-2; assembling-machine-3
+sulfuric-acid-barrel,Fill Sulfuric acid barrel,Intermediate products,0.2,Sulfuric acid x50; Barrel x1,Sulfuric acid barrel x1,assembling-machine-2; assembling-machine-3
+empty-water-barrel,Empty Water barrel,Intermediate products,0.2,Water barrel x1,Water x50; Barrel x1,assembling-machine-2; assembling-machine-3
+empty-crude-oil-barrel,Empty Crude oil barrel,Intermediate products,0.2,Crude oil barrel x1,Crude oil x50; Barrel x1,assembling-machine-2; assembling-machine-3
+empty-petroleum-gas-barrel,Empty Petroleum gas barrel,Intermediate products,0.2,Petroleum gas barrel x1,Petroleum gas x50; Barrel x1,assembling-machine-2; assembling-machine-3
+empty-light-oil-barrel,Empty Light oil barrel,Intermediate products,0.2,Light oil barrel x1,Light oil x50; Barrel x1,assembling-machine-2; assembling-machine-3
+empty-heavy-oil-barrel,Empty Heavy oil barrel,Intermediate products,0.2,Heavy oil barrel x1,Heavy oil x50; Barrel x1,assembling-machine-2; assembling-machine-3
+empty-lubricant-barrel,Empty Lubricant barrel,Intermediate products,0.2,Lubricant barrel x1,Lubricant x50; Barrel x1,assembling-machine-2; assembling-machine-3
+empty-sulfuric-acid-barrel,Empty Sulfuric acid barrel,Intermediate products,0.2,Sulfuric acid barrel x1,Sulfuric acid x50; Barrel x1,assembling-machine-2; assembling-machine-3
+iron-gear-wheel,Iron gear wheel,Intermediate products,0.5,Iron plate x2,Iron gear wheel x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+iron-stick,Iron stick,Intermediate products,0.5,Iron plate x1,Iron stick x2,assembling-machine-1; assembling-machine-2; assembling-machine-3
+copper-cable,Copper cable,Intermediate products,0.5,Copper plate x1,Copper cable x2,assembling-machine-1; assembling-machine-2; assembling-machine-3
+barrel,Barrel,Intermediate products,1,Steel plate x1,Barrel x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+electronic-circuit,Electronic circuit,Intermediate products,0.5,Iron plate x1; Copper cable x3,Electronic circuit x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+advanced-circuit,Advanced circuit,Intermediate products,6,Electronic circuit x2; Plastic bar x2; Copper cable x4,Advanced circuit x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+processing-unit,Processing unit,Intermediate products,10,Electronic circuit x20; Advanced circuit x2; Sulfuric acid x5,Processing unit x1,assembling-machine-2; assembling-machine-3
+engine-unit,Engine unit,Intermediate products,10,Steel plate x1; Iron gear wheel x1; Pipe x2,Engine unit x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+electric-engine-unit,Electric engine unit,Intermediate products,10,Engine unit x1; Lubricant x15; Electronic circuit x2,Electric engine unit x1,assembling-machine-2; assembling-machine-3
+flying-robot-frame,Flying robot frame,Intermediate products,20,Electric engine unit x1; Battery x2; Steel plate x1; Electronic circuit x3,Flying robot frame x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+low-density-structure,Low density structure,Intermediate products,15,Steel plate x2; Copper plate x20; Plastic bar x5,Low density structure x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+rocket-fuel,Rocket fuel,Intermediate products,15,Solid fuel x10; Light oil x10,Rocket fuel x1,assembling-machine-2; assembling-machine-3
+rocket-part,Rocket part,Intermediate products,3,Processing unit x10; Low density structure x10; Rocket fuel x10,Rocket part x1,rocket-silo
+uranium-processing,Uranium processing,Intermediate products,12,Uranium ore x10,Uranium-235 x0.007000000000000001; Uranium-238 x0.993,centrifuge
+depleted-uranium-fuel-cell,Uranium fuel cell : Depleted uranium fuel cell,Intermediate products,1,Uranium fuel cell x0,Depleted uranium fuel cell x0,nuclear-reactor
+uranium-fuel-cell,Uranium fuel cell,Intermediate products,10,Iron plate x10; Uranium-235 x1; Uranium-238 x19,Uranium fuel cell x10,assembling-machine-1; assembling-machine-2; assembling-machine-3
+nuclear-fuel-reprocessing,Nuclear fuel reprocessing,Intermediate products,60,Depleted uranium fuel cell x5,Uranium-238 x3,centrifuge
+kovarex-enrichment-process,Kovarex enrichment process,Intermediate products,60,Uranium-235 x40; Uranium-238 x5,Uranium-235 x41; Uranium-238 x2,centrifuge
+nuclear-fuel,Nuclear fuel,Intermediate products,90,Uranium-235 x1; Rocket fuel x1,Nuclear fuel x1,centrifuge
+automation-science-pack,Automation science pack,Intermediate products,5,Copper plate x1; Iron gear wheel x1,Automation science pack x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+logistic-science-pack,Logistic science pack,Intermediate products,6,Inserter x1; Transport belt x1,Logistic science pack x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+military-science-pack,Military science pack,Intermediate products,10,Piercing rounds magazine x1; Grenade x1; Wall x2,Military science pack x2,assembling-machine-1; assembling-machine-2; assembling-machine-3
+chemical-science-pack,Chemical science pack,Intermediate products,24,Engine unit x2; Advanced circuit x3; Sulfur x1,Chemical science pack x2,assembling-machine-1; assembling-machine-2; assembling-machine-3
+production-science-pack,Production science pack,Intermediate products,21,Electric furnace x1; Productivity module x1; Rail x30,Production science pack x3,assembling-machine-1; assembling-machine-2; assembling-machine-3
+utility-science-pack,Utility science pack,Intermediate products,21,Low density structure x3; Processing unit x2; Flying robot frame x1,Utility science pack x3,assembling-machine-1; assembling-machine-2; assembling-machine-3
+space-science-pack,Rocket silo : Space science pack,Intermediate products,40.6,Satellite x1; Rocket part x100,Space science pack x1000,rocket-silo
+submachine-gun,Submachine gun,Combat,10,Iron gear wheel x10; Copper plate x5; Iron plate x10,Submachine gun x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+shotgun,Shotgun,Combat,10,Iron plate x15; Iron gear wheel x5; Copper plate x10; Wood x5,Shotgun x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+combat-shotgun,Combat shotgun,Combat,10,Steel plate x15; Iron gear wheel x5; Copper plate x10; Wood x10,Combat shotgun x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+rocket-launcher,Rocket launcher,Combat,10,Iron plate x5; Iron gear wheel x5; Electronic circuit x5,Rocket launcher x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+flamethrower,Flamethrower,Combat,10,Steel plate x5; Iron gear wheel x10,Flamethrower x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+firearm-magazine,Firearm magazine,Combat,1,Iron plate x4,Firearm magazine x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+piercing-rounds-magazine,Piercing rounds magazine,Combat,6,Firearm magazine x2; Steel plate x1; Copper plate x2,Piercing rounds magazine x2,assembling-machine-1; assembling-machine-2; assembling-machine-3
+uranium-rounds-magazine,Uranium rounds magazine,Combat,10,Piercing rounds magazine x1; Uranium-238 x1,Uranium rounds magazine x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+shotgun-shell,Shotgun shells,Combat,3,Copper plate x2; Iron plate x2,Shotgun shells x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+piercing-shotgun-shell,Piercing shotgun shells,Combat,8,Shotgun shells x2; Copper plate x5; Steel plate x2,Piercing shotgun shells x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+cannon-shell,Cannon shell,Combat,8,Steel plate x2; Plastic bar x2; Explosives x1,Cannon shell x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+explosive-cannon-shell,Explosive cannon shell,Combat,8,Steel plate x2; Plastic bar x2; Explosives x2,Explosive cannon shell x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+uranium-cannon-shell,Uranium cannon shell,Combat,12,Cannon shell x1; Uranium-238 x1,Uranium cannon shell x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+explosive-uranium-cannon-shell,Explosive uranium cannon shell,Combat,12,Explosive cannon shell x1; Uranium-238 x1,Explosive uranium cannon shell x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+artillery-shell,Artillery shell,Combat,15,Explosive cannon shell x4; Radar x1; Explosives x8,Artillery shell x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+rocket,Rocket,Combat,4,Explosives x1; Iron plate x2,Rocket x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+explosive-rocket,Explosive rocket,Combat,8,Rocket x1; Explosives x2,Explosive rocket x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+atomic-bomb,Atomic bomb,Combat,50,Processing unit x10; Explosives x10; Uranium-235 x30,Atomic bomb x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+flamethrower-ammo,Flamethrower ammo,Combat,6,Steel plate x5; Crude oil x100,Flamethrower ammo x1,chemical-plant
+grenade,Grenade,Combat,8,Iron plate x5; Coal x10,Grenade x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+cluster-grenade,Cluster grenade,Combat,8,Grenade x7; Explosives x5; Steel plate x5,Cluster grenade x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+poison-capsule,Poison capsule,Combat,8,Steel plate x3; Electronic circuit x3; Coal x10,Poison capsule x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+slowdown-capsule,Slowdown capsule,Combat,8,Steel plate x2; Electronic circuit x2; Coal x5,Slowdown capsule x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+defender-capsule,Defender capsule,Combat,8,Piercing rounds magazine x3; Electronic circuit x3; Iron gear wheel x3,Defender capsule x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+distractor-capsule,Distractor capsule,Combat,15,Defender capsule x4; Advanced circuit x3,Distractor capsule x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+destroyer-capsule,Destroyer capsule,Combat,15,Distractor capsule x4; Speed module x1,Destroyer capsule x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+light-armor,Light armor,Combat,3,Iron plate x40,Light armor x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+heavy-armor,Heavy armor,Combat,8,Copper plate x100; Steel plate x50,Heavy armor x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+modular-armor,Modular armor,Combat,15,Advanced circuit x30; Steel plate x50,Modular armor x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+power-armor,Power armor,Combat,20,Processing unit x40; Electric engine unit x20; Steel plate x40,Power armor x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+power-armor-mk2,Power armor MK2,Combat,25,Efficiency module 2 x25; Speed module 2 x25; Processing unit x60; Electric engine unit x40; Low density structure x30,Power armor MK2 x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+solar-panel-equipment,Portable solar panel,Combat,10,Solar panel x1; Advanced circuit x2; Steel plate x5,Portable solar panel x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+fission-reactor-equipment,Portable fission reactor,Combat,10,Processing unit x200; Low density structure x50; Uranium fuel cell x4,Portable fission reactor x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+battery-equipment,Personal battery,Combat,10,Battery x5; Steel plate x10,Personal battery x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+battery-mk2-equipment,Personal battery MK2,Combat,10,Personal battery x10; Processing unit x15; Low density structure x5,Personal battery MK2 x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+belt-immunity-equipment,Belt immunity equipment,Combat,10,Advanced circuit x5; Steel plate x10,Belt immunity equipment x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+exoskeleton-equipment,Exoskeleton,Combat,10,Processing unit x10; Electric engine unit x30; Steel plate x20,Exoskeleton x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+personal-roboport-equipment,Personal roboport,Combat,10,Advanced circuit x10; Iron gear wheel x40; Steel plate x20; Battery x45,Personal roboport x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+personal-roboport-mk2-equipment,Personal roboport MK2,Combat,20,Personal roboport x5; Processing unit x100; Low density structure x20,Personal roboport MK2 x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+night-vision-equipment,Nightvision,Combat,10,Advanced circuit x5; Steel plate x10,Nightvision x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+energy-shield-equipment,Energy shield,Combat,10,Advanced circuit x5; Steel plate x10,Energy shield x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+energy-shield-mk2-equipment,Energy shield MK2,Combat,10,Energy shield x10; Processing unit x5; Low density structure x5,Energy shield MK2 x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+personal-laser-defense-equipment,Personal laser defense,Combat,10,Processing unit x20; Low density structure x5; Laser turret x5,Personal laser defense x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+discharge-defense-equipment,Discharge defense,Combat,10,Processing unit x5; Steel plate x20; Laser turret x10,Discharge defense x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+stone-wall,Wall,Combat,0.5,Stone brick x5,Wall x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+gate,Gate,Combat,0.5,Wall x1; Steel plate x2; Electronic circuit x2,Gate x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+radar,Radar,Combat,0.5,Electronic circuit x5; Iron gear wheel x5; Iron plate x10,Radar x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+land-mine,Land mine,Combat,5,Steel plate x1; Explosives x2,Land mine x4,assembling-machine-1; assembling-machine-2; assembling-machine-3
+gun-turret,Gun turret,Combat,8,Iron gear wheel x10; Copper plate x10; Iron plate x20,Gun turret x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+laser-turret,Laser turret,Combat,20,Steel plate x20; Electronic circuit x20; Battery x12,Laser turret x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+flamethrower-turret,Flamethrower turret,Combat,20,Steel plate x30; Iron gear wheel x15; Pipe x10; Engine unit x5,Flamethrower turret x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+artillery-turret,Artillery turret,Combat,40,Steel plate x60; Concrete x60; Iron gear wheel x40; Advanced circuit x20,Artillery turret x1,assembling-machine-1; assembling-machine-2; assembling-machine-3
+water,Offshore pump : Water,Fluids,1,,Water x1200,offshore-pump
+steam,Boiler : Steam,Fluids,300,Water x1,Steam (165°C) x10,boiler
+heat-exchanger-steam-boil,Heat exchanger : Steam,Fluids,970,Water x1,Steam (500°C) x10,heat-exchanger
+iron-ore,Iron ore,Intermediate products,1,,Iron ore x1,burner-mining-drill; electric-mining-drill
+copper-ore,Copper ore,Intermediate products,1,,Copper ore x1,burner-mining-drill; electric-mining-drill
+coal,Coal,Intermediate products,1,,Coal x1,burner-mining-drill; electric-mining-drill
+stone,Stone,Intermediate products,1,,Stone x1,burner-mining-drill; electric-mining-drill
+uranium-ore,Uranium ore,Intermediate products,2,Sulfuric acid x1,Uranium ore x1,electric-mining-drill
+crude-oil,Crude oil,Fluids,1,,Crude oil x10,pumpjack
+
+</script>
+
+<script>
+(function () {
+  "use strict";
+
+  const PIN_KEY = "factorio-recipe-board:pinned";
+  const THEME_KEY = "factorio-recipe-board:theme";
+  const ALL_TAB = "__all__";
+  const PINNED_TAB = "__pinned__";
+
+  const ICON_SHEET_SIZE = 64;   // native icon cell size in icons.webp
+  const ICON_DISPLAY_SIZE = 20; // rendered size in the UI
+  const SHEET_W = 1318, SHEET_H = 1252; // native icons.webp dimensions
+  const ICON_MAP = {"Wood":[330,594],"Wooden chest":[0,0],"Iron plate":[660,132],"Iron chest":[66,0],"Steel plate":[660,264],"Steel chest":[0,66],"Storage tank":[66,66],"Iron gear wheel":[462,660],"Transport belt":[132,0],"Fast transport belt":[132,66],"Lubricant":[924,264],"Express transport belt":[0,132],"Underground belt":[66,132],"Fast underground belt":[132,132],"Express underground belt":[198,0],"Electronic circuit":[726,0],"Splitter":[198,66],"Fast splitter":[198,132],"Advanced circuit":[726,66],"Express splitter":[0,198],"Burner inserter":[66,198],"Inserter":[132,198],"Long-handed inserter":[198,198],"Fast inserter":[264,0],"Bulk inserter":[264,66],"Copper cable":[594,660],"Small electric pole":[264,132],"Iron stick":[528,660],"Medium electric pole":[264,198],"Big electric pole":[0,264],"Substation":[66,264],"Pipe":[132,264],"Pipe to ground":[198,264],"Engine unit":[726,198],"Pump":[264,264],"Stone":[462,594],"Rail":[330,0],"Train stop":[330,66],"Rail signal":[330,132],"Rail chain signal":[330,198],"Locomotive":[330,264],"Cargo wagon":[0,330],"Fluid wagon":[66,330],"Artillery wagon":[132,330],"Car":[198,330],"Tank":[264,330],"Exoskeleton":[858,594],"Portable fission reactor":[858,330],"Rocket launcher":[792,66],"Processing unit":[726,132],"Low density structure":[726,396],"Radar":[396,858],"Efficiency module 3":[594,462],"Raw fish":[660,66],"Spidertron":[330,330],"Flying robot frame":[726,330],"Logistic robot":[396,0],"Construction robot":[396,66],"Active provider chest":[396,132],"Passive provider chest":[396,198],"Storage chest":[396,264],"Buffer chest":[396,330],"Requester chest":[0,396],"Roboport":[66,396],"Lamp":[132,396],"Arithmetic combinator":[198,396],"Decider combinator":[264,396],"Selector combinator":[330,396],"Constant combinator":[396,396],"Power switch":[462,0],"Programmable speaker":[462,66],"Display panel":[462,132],"Stone brick":[462,198],"Iron ore":[528,594],"Water":[792,858],"Concrete":[462,264],"Hazard concrete":[462,330],"Refined concrete":[462,396],"Refined hazard concrete":[0,462],"Landfill":[66,462],"Explosives":[660,594],"Grenade":[330,792],"Barrel":[660,660],"Cliff explosives":[132,462],"Repair pack":[198,462],"Stone furnace":[0,528],"Boiler":[264,462],"Steam engine":[330,462],"Copper plate":[660,198],"Solar panel":[396,462],"Battery":[660,528],"Accumulator":[462,462],"Nuclear reactor":[528,0],"Heat pipe":[528,66],"Heat exchanger":[528,132],"Steam turbine":[528,198],"Burner mining drill":[528,264],"Electric mining drill":[528,330],"Offshore pump":[528,396],"Pumpjack":[528,462],"Steel furnace":[66,528],"Electric furnace":[132,528],"Assembling machine 1":[198,528],"Assembling machine 2":[264,528],"Speed module":[594,132],"Assembling machine 3":[330,528],"Oil refinery":[396,528],"Chemical plant":[462,528],"Centrifuge":[528,528],"Lab":[594,0],"Beacon":[594,66],"Speed module 2":[594,198],"Speed module 3":[594,264],"Efficiency module":[594,330],"Efficiency module 2":[594,396],"Productivity module":[594,528],"Productivity module 2":[0,594],"Productivity module 3":[66,594],"Electric engine unit":[726,264],"Rocket silo":[132,594],"Cargo landing pad":[198,594],"Rocket fuel":[726,462],"Satellite":[264,594],"Crude oil":[924,0],"Petroleum gas":[924,66],"Heavy oil":[924,198],"Light oil":[924,132],"Coal":[396,594],"Steam (165°C)":[858,858],"Steam (500°C)":[858,858],"Solid fuel":[660,330],"Sulfur":[660,462],"Sulfuric acid":[924,330],"Copper ore":[594,594],"Plastic bar":[660,396],"Water barrel":[0,660],"Crude oil barrel":[66,660],"Petroleum gas barrel":[132,660],"Light oil barrel":[198,660],"Heavy oil barrel":[264,660],"Lubricant barrel":[330,660],"Sulfuric acid barrel":[396,660],"Rocket part":[726,528],"Uranium ore":[660,0],"Uranium-235":[726,594],"Uranium-238":[726,660],"Uranium fuel cell":[0,726],"Depleted uranium fuel cell":[66,726],"Nuclear fuel":[132,726],"Automation science pack":[198,726],"Logistic science pack":[264,726],"Piercing rounds magazine":[792,264],"Wall":[264,858],"Military science pack":[330,726],"Chemical science pack":[396,726],"Production science pack":[462,726],"Utility science pack":[528,726],"Space science pack":[594,726],"Submachine gun":[660,726],"Shotgun":[726,726],"Combat shotgun":[792,0],"Flamethrower":[792,132],"Firearm magazine":[792,198],"Uranium rounds magazine":[792,330],"Shotgun shells":[792,396],"Piercing shotgun shells":[792,462],"Cannon shell":[792,528],"Explosive cannon shell":[792,594],"Uranium cannon shell":[792,660],"Explosive uranium cannon shell":[792,726],"Artillery shell":[0,792],"Rocket":[66,792],"Explosive rocket":[132,792],"Atomic bomb":[198,792],"Flamethrower ammo":[264,792],"Cluster grenade":[396,792],"Poison capsule":[462,792],"Slowdown capsule":[528,792],"Defender capsule":[594,792],"Distractor capsule":[660,792],"Destroyer capsule":[726,792],"Light armor":[792,792],"Heavy armor":[858,0],"Modular armor":[858,66],"Power armor":[858,132],"Power armor MK2":[858,198],"Portable solar panel":[858,264],"Personal battery":[858,396],"Personal battery MK2":[858,462],"Belt immunity equipment":[858,528],"Personal roboport":[858,660],"Personal roboport MK2":[858,726],"Nightvision":[858,792],"Energy shield":[0,858],"Energy shield MK2":[66,858],"Laser turret":[594,858],"Personal laser defense":[132,858],"Discharge defense":[198,858],"Gate":[330,858],"Land mine":[462,858],"Gun turret":[528,858],"Flamethrower turret":[660,858],"Artillery turret":[726,858]}; // { "Item name": [x, y], ... }
+
+  let recipes = [];
+  let categories = [];
+  let pinned = new Set(JSON.parse(localStorage.getItem(PIN_KEY) || "[]"));
+  let currentTab = ALL_TAB;
+  let searchTerm = "";
+
+  // ---------- CSV parsing (handles simple quoting, just in case) ----------
+  function parseCSV(text) {
+    const rows = [];
+    let row = [], field = "", inQuotes = false;
+    text = text.replace(/\r\n/g, "\n");
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (inQuotes) {
+        if (c === '"') {
+          if (text[i + 1] === '"') { field += '"'; i++; }
+          else { inQuotes = false; }
+        } else field += c;
+      } else {
+        if (c === '"') inQuotes = true;
+        else if (c === ',') { row.push(field); field = ""; }
+        else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ""; }
+        else field += c;
+      }
+    }
+    if (field.length || row.length) { row.push(field); rows.push(row); }
+    return rows.filter(r => r.length > 1 || (r.length === 1 && r[0] !== ""));
+  }
+
+  function rowsToRecipes(rows) {
+    const header = rows[0].map(h => h.trim());
+    return rows.slice(1).map(r => {
+      const obj = {};
+      header.forEach((h, idx) => obj[h] = (r[idx] || "").trim());
+      return obj;
+    });
+  }
+
+  async function loadRecipes() {
+    let text = null;
+    try {
+      const resp = await fetch("recipes.csv", { cache: "no-store" });
+      if (resp.ok) text = await resp.text();
+    } catch (e) { /* file:// fetch blocked, will fall back below */ }
+
+    if (!text) {
+      const fallback = document.getElementById("recipes-csv-fallback");
+      text = fallback ? fallback.textContent.trim() : "";
+    }
+
+    const rows = parseCSV(text.trim());
+    recipes = rowsToRecipes(rows);
+
+    const seen = new Map();
+    recipes.forEach(r => {
+      if (!seen.has(r.categoria)) seen.set(r.categoria, 0);
+      seen.set(r.categoria, seen.get(r.categoria) + 1);
+    });
+    categories = Array.from(seen.keys());
+
+    buildItemToRecipeMap();
+    render();
+  }
+
+  // ---------- Persistence ----------
+  function savePinned() {
+    localStorage.setItem(PIN_KEY, JSON.stringify(Array.from(pinned)));
+  }
+
+  function togglePin(id) {
+    if (pinned.has(id)) pinned.delete(id); else pinned.add(id);
+    savePinned();
+    render();
+  }
+
+  // ---------- Theme ----------
+  function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    const label = document.getElementById("theme-label");
+    const btn = document.getElementById("theme-toggle");
+    if (theme === "dark") {
+      label.textContent = "Scuro";
+      btn.firstChild.textContent = "🌙 ";
+    } else {
+      label.textContent = "Chiaro";
+      btn.firstChild.textContent = "☀️ ";
+    }
+    localStorage.setItem(THEME_KEY, theme);
+  }
+
+  document.getElementById("theme-toggle").addEventListener("click", () => {
+    const current = document.documentElement.getAttribute("data-theme");
+    applyTheme(current === "dark" ? "light" : "dark");
+  });
+
+  // ---------- Tabs ----------
+  function tabLabel(cat) {
+    const map = {
+      "Logistics": "Logistica",
+      "Production": "Produzione",
+      "Intermediate products": "Prodotti intermedi",
+      "Combat": "Combattimento",
+      "Fluids": "Fluidi"
+    };
+    return map[cat] || cat;
+  }
+
+  function renderTabs() {
+    const tabsEl = document.getElementById("tabs");
+    tabsEl.innerHTML = "";
+
+    const makeTab = (id, label, count) => {
+      const btn = document.createElement("button");
+      btn.className = "tab" + (currentTab === id ? " active" : "");
+      btn.innerHTML = `${label} <span class="count">${count}</span>`;
+      btn.addEventListener("click", () => { currentTab = id; render(); });
+      return btn;
+    };
+
+    tabsEl.appendChild(makeTab(ALL_TAB, "Tutte", recipes.length));
+    categories.forEach(cat => {
+      const count = recipes.filter(r => r.categoria === cat).length;
+      tabsEl.appendChild(makeTab(cat, tabLabel(cat), count));
+    });
+    const pinTab = makeTab(PINNED_TAB, "⭐ Preferiti", pinned.size);
+    tabsEl.appendChild(pinTab);
+  }
+
+  // ---------- Cards ----------
+  function pinIconSVG(active) {
+    return `<svg viewBox="0 0 24 24" fill="${active ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>
+    </svg>`;
+  }
+
+  function matchesSearch(r, term) {
+    if (!term) return true;
+    return r.nome.toLowerCase().includes(term);
+  }
+
+  // Parses "Iron plate x8; Iron gear wheel x1" into [{name:"Iron plate", qty:"8"}, ...]
+  function parseItemList(str) {
+    if (!str) return [];
+    return str.split(";").map(s => s.trim()).filter(Boolean).map(tok => {
+      const m = tok.match(/^(.*)\sx([\d.]+)$/);
+      return m ? { name: m[1].trim(), qty: m[2] } : { name: tok, qty: "" };
+    });
+  }
+
+  function iconStyle(name) {
+    const pos = ICON_MAP[name];
+    if (!pos) return null;
+    const scale = ICON_DISPLAY_SIZE / ICON_SHEET_SIZE;
+    return `background-position: -${pos[0] * scale}px -${pos[1] * scale}px; background-size: ${SHEET_W * scale}px ${SHEET_H * scale}px;`;
+  }
+
+  function iconHTMLFor(name, extraClass) {
+    const style = iconStyle(name);
+    return style
+      ? `<span class="item-icon ${extraClass || ""}" style="${style}"></span>`
+      : `<span class="item-icon missing ${extraClass || ""}"></span>`;
+  }
+
+  // Map: item name -> id of the recipe that produces it (for cross-recipe links)
+  let itemToRecipe = {};
+  function buildItemToRecipeMap() {
+    itemToRecipe = {};
+    recipes.forEach(r => {
+      parseItemList(r.prodotti).forEach(p => {
+        if (!(p.name in itemToRecipe)) itemToRecipe[p.name] = r.id;
+      });
+    });
+    // Prefer the recipe whose own title matches the item name exactly (canonical recipe)
+    recipes.forEach(r => {
+      parseItemList(r.prodotti).forEach(p => {
+        if (p.name === r.nome) itemToRecipe[p.name] = r.id;
+      });
+    });
+  }
+
+  function renderItemLine(item, isProduct) {
+    const iconHTML = iconHTMLFor(item.name);
+    const qtyPart = item.qty ? ` x${item.qty}` : "";
+    const targetId = itemToRecipe[item.name];
+    const linkable = targetId ? ` data-goto="${escapeHTML(targetId)}" tabindex="0" role="button"` : "";
+    const cls = "item-line" + (isProduct ? " product" : "") + (targetId ? " linkable" : "");
+    return `<div class="${cls}"${linkable}>${iconHTML}<span>${escapeHTML(item.name)}${qtyPart}</span></div>`;
+  }
+
+  function renderCards() {
+    const grid = document.getElementById("grid");
+    const emptyState = document.getElementById("empty-state");
+    grid.innerHTML = "";
+
+    let list = recipes;
+    if (currentTab === PINNED_TAB) {
+      list = list.filter(r => pinned.has(r.id));
+    } else if (currentTab !== ALL_TAB) {
+      list = list.filter(r => r.categoria === currentTab);
+    }
+    if (searchTerm) {
+      list = list.filter(r => matchesSearch(r, searchTerm));
+    }
+
+    document.getElementById("visible-count").textContent = list.length;
+
+    if (list.length === 0) {
+      emptyState.style.display = "block";
+      return;
+    }
+    emptyState.style.display = "none";
+
+    const frag = document.createDocumentFragment();
+    list.forEach(r => {
+      const isPinned = pinned.has(r.id);
+      const mainProduct = parseItemList(r.prodotti)[0];
+      const titleIcon = iconHTMLFor(r.nome in ICON_MAP ? r.nome : (mainProduct ? mainProduct.name : ""), "title-icon");
+      const card = document.createElement("div");
+      card.className = "card" + (isPinned ? " pinned" : "");
+      card.dataset.id = r.id;
+      card.innerHTML = `
+        <div class="card-head">
+          <div class="card-title-wrap">
+            ${titleIcon}
+            <div class="card-title">${escapeHTML(r.nome)}</div>
+          </div>
+          <button class="pin-btn ${isPinned ? "active" : ""}" title="${isPinned ? "Rimuovi dai preferiti" : "Pinna questa ricetta"}">
+            ${pinIconSVG(isPinned)}
+          </button>
+        </div>
+        <div class="meta-row">
+          <span class="badge">${tabLabel(r.categoria)}</span>
+          <span class="badge time">⏱ ${r.tempo_secondi}s</span>
+        </div>
+        <div class="flow">
+          <div class="flow-section">
+            <div class="flow-label">Ingredienti</div>
+            ${parseItemList(r.ingredienti).map(i => renderItemLine(i, false)).join("") || "<div class=\"item-line\">—</div>"}
+          </div>
+          <div class="flow-section">
+            <div class="flow-label"><span class="arrow">→</span> Prodotti</div>
+            ${parseItemList(r.prodotti).map(i => renderItemLine(i, true)).join("")}
+          </div>
+          <div class="machines">🏭 ${escapeHTML(r.macchine || "—")}</div>
+        </div>
+      `;
+      card.querySelector(".pin-btn").addEventListener("click", () => togglePin(r.id));
+      card.querySelectorAll(".item-line.linkable").forEach(el => {
+        el.addEventListener("click", () => goToRecipe(el.dataset.goto));
+        el.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); goToRecipe(el.dataset.goto); }
+        });
+      });
+      frag.appendChild(card);
+    });
+    grid.appendChild(frag);
+  }
+
+  function goToRecipe(id) {
+    if (!id) return;
+    currentTab = ALL_TAB;
+    searchTerm = "";
+    document.getElementById("search").value = "";
+    render();
+    requestAnimationFrame(() => {
+      const target = document.querySelector(`.card[data-id="${CSS.escape(id)}"]`);
+      if (!target) return;
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      target.classList.add("highlight");
+      setTimeout(() => target.classList.remove("highlight"), 1600);
+    });
+  }
+
+  function escapeHTML(str) {
+    return (str || "").replace(/[&<>"']/g, s => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[s]));
+  }
+
+  function render() {
+    renderTabs();
+    renderCards();
+  }
+
+  // ---------- Search ----------
+  document.getElementById("search").addEventListener("input", (e) => {
+    searchTerm = e.target.value.trim().toLowerCase();
+    render();
+  });
+
+  // ---------- Export / Import / Clear ----------
+  document.getElementById("export-btn").addEventListener("click", () => {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      pinned: Array.from(pinned)
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "factorio-ricette-preferite.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById("import-btn").addEventListener("click", () => {
+    document.getElementById("file-input").click();
+  });
+
+  document.getElementById("file-input").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        const list = Array.isArray(data) ? data : (data.pinned || []);
+        pinned = new Set(list);
+        savePinned();
+        render();
+      } catch (err) {
+        alert("File JSON non valido.");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  });
+
+  document.getElementById("clear-btn").addEventListener("click", () => {
+    if (pinned.size === 0) return;
+    if (confirm("Svuotare tutti i preferiti?")) {
+      pinned.clear();
+      savePinned();
+      render();
+    }
+  });
+
+  // ---------- Init ----------
+  applyTheme(localStorage.getItem(THEME_KEY) || "dark");
+  loadRecipes();
+})();
+</script>
+
+</body>
+</html>
