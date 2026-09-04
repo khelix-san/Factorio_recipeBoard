@@ -130,6 +130,19 @@
   }
   .theme-btn:hover { border-color: var(--accent); }
 
+  .lang-select {
+    border: 1px solid var(--border);
+    background: var(--panel-2);
+    color: var(--text);
+    padding: 9px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-family: inherit;
+  }
+  .lang-select:hover { border-color: var(--accent); }
+  .lang-select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
   nav.tabs {
     max-width: 1280px;
     margin: 0 auto;
@@ -354,20 +367,27 @@
   <div class="top-inner">
     <div class="brand"><span class="cog">⚙</span><span class="full">Factorio Recipe Board</span></div>
     <div class="search-wrap">
-      <input type="text" id="search" placeholder="Cerca per nome ricetta…" autocomplete="off">
+      <input type="text" id="search" placeholder="Search recipe by name…" autocomplete="off">
     </div>
-    <button class="theme-btn" id="theme-toggle">🌙 <span id="theme-label">Scuro</span></button>
+    <select class="lang-select" id="lang-select">
+      <option value="en">🇬🇧 English</option>
+      <option value="it">🇮🇹 Italiano</option>
+      <option value="de">🇩🇪 Deutsch</option>
+      <option value="es">🇪🇸 Español</option>
+      <option value="fr">🇫🇷 Français</option>
+    </select>
+    <button class="theme-btn" id="theme-toggle">🌙 <span id="theme-label">Dark</span></button>
   </div>
   <nav class="tabs" id="tabs"></nav>
 </header>
 
 <main>
   <div class="toolbar">
-    <div><span class="stat-num" id="visible-count">0</span> ricette</div>
+    <div><span class="stat-num" id="visible-count">0</span> <span id="recipes-count-label">recipes</span></div>
     <div class="toolbar-actions">
-      <button class="btn-sm" id="export-btn">⭳ Esporta preferiti (JSON)</button>
-      <button class="btn-sm" id="import-btn">⭱ Importa preferiti (JSON)</button>
-      <button class="btn-sm danger" id="clear-btn">✕ Svuota preferiti</button>
+      <button class="btn-sm" id="export-btn">⭳ <span id="export-label">Export favorites (JSON)</span></button>
+      <button class="btn-sm" id="import-btn">⭱ <span id="import-label">Import favorites (JSON)</span></button>
+      <button class="btn-sm danger" id="clear-btn">✕ <span id="clear-label">Clear favorites</span></button>
       <input type="file" id="file-input" accept="application/json">
     </div>
   </div>
@@ -375,15 +395,11 @@
   <div class="grid" id="grid"></div>
   <div class="empty-state" id="empty-state" style="display:none">
     <div class="big">🔧</div>
-    <div>Nessuna ricetta trovata.</div>
+    <div id="empty-label">No recipe found.</div>
   </div>
 </main>
 
-<footer>
-  Dati ricette: Factorio 2.0 (base game, esclude l'espansione Space Age e le tecnologie di ricerca) —
-  214 ricette suddivise nelle categorie del gioco (Logistics, Production, Intermediate products, Combat, Fluids).
-  Sorgente: <a href="https://github.com/factoriolab/factoriolab" target="_blank" rel="noopener">factoriolab</a> (a sua volta basato sui file di gioco ufficiali).
-  I preferiti sono salvati automaticamente nel browser (localStorage) e possono anche essere esportati/importati come file JSON.
+<footer id="footer-text">
 </footer>
 
 <script id="recipes-csv-fallback" type="text/csv">
@@ -611,6 +627,7 @@ crude-oil,Crude oil,Fluids,1,,Crude oil x10,pumpjack
 
   const PIN_KEY = "factorio-recipe-board:pinned";
   const THEME_KEY = "factorio-recipe-board:theme";
+  const LANG_KEY = "factorio-recipe-board:lang";
   const ALL_TAB = "__all__";
   const PINNED_TAB = "__pinned__";
 
@@ -624,6 +641,149 @@ crude-oil,Crude oil,Fluids,1,,Crude oil x10,pumpjack
   let pinned = new Set(JSON.parse(localStorage.getItem(PIN_KEY) || "[]"));
   let currentTab = ALL_TAB;
   let searchTerm = "";
+  let currentLang = localStorage.getItem(LANG_KEY) || "en";
+
+  // ---------- Internationalization (UI text only — item/recipe names stay in English,
+  // the language used by the underlying Factorio game data) ----------
+  const I18N = {
+    en: {
+      searchPlaceholder: "Search recipe by name…",
+      themeDark: "Dark",
+      themeLight: "Light",
+      tabAll: "All",
+      tabPinned: "⭐ Favorites",
+      categories: {
+        "Logistics": "Logistics",
+        "Production": "Production",
+        "Intermediate products": "Intermediate products",
+        "Combat": "Combat",
+        "Fluids": "Fluids"
+      },
+      recipesLabel: "recipes",
+      exportBtn: "Export favorites (JSON)",
+      importBtn: "Import favorites (JSON)",
+      clearBtn: "Clear favorites",
+      emptyState: "No recipe found.",
+      ingredients: "Ingredients",
+      products: "Products",
+      pinOn: "Remove from favorites",
+      pinOff: "Pin this recipe",
+      confirmClear: "Clear all favorites?",
+      invalidJson: "Invalid JSON file.",
+      exportFilename: "factorio-favorite-recipes.json",
+      footer: 'Recipe data: Factorio 2.0 (base game, excludes the Space Age expansion and research technologies) — 214 recipes grouped into the game\'s own categories (Logistics, Production, Intermediate products, Combat, Fluids). Source: <a href="https://github.com/factoriolab/factoriolab" target="_blank" rel="noopener">factoriolab</a> (itself based on the official game files). Favorites are saved automatically in your browser (localStorage) and can also be exported/imported as a JSON file.'
+    },
+    it: {
+      searchPlaceholder: "Cerca per nome ricetta…",
+      themeDark: "Scuro",
+      themeLight: "Chiaro",
+      tabAll: "Tutte",
+      tabPinned: "⭐ Preferiti",
+      categories: {
+        "Logistics": "Logistica",
+        "Production": "Produzione",
+        "Intermediate products": "Prodotti intermedi",
+        "Combat": "Combattimento",
+        "Fluids": "Fluidi"
+      },
+      recipesLabel: "ricette",
+      exportBtn: "Esporta preferiti (JSON)",
+      importBtn: "Importa preferiti (JSON)",
+      clearBtn: "Svuota preferiti",
+      emptyState: "Nessuna ricetta trovata.",
+      ingredients: "Ingredienti",
+      products: "Prodotti",
+      pinOn: "Rimuovi dai preferiti",
+      pinOff: "Pinna questa ricetta",
+      confirmClear: "Svuotare tutti i preferiti?",
+      invalidJson: "File JSON non valido.",
+      exportFilename: "factorio-ricette-preferite.json",
+      footer: 'Dati ricette: Factorio 2.0 (base game, esclude l\'espansione Space Age e le tecnologie di ricerca) — 214 ricette suddivise nelle categorie del gioco (Logistics, Production, Intermediate products, Combat, Fluids). Sorgente: <a href="https://github.com/factoriolab/factoriolab" target="_blank" rel="noopener">factoriolab</a> (a sua volta basato sui file di gioco ufficiali). I preferiti sono salvati automaticamente nel browser (localStorage) e possono anche essere esportati/importati come file JSON.'
+    },
+    de: {
+      searchPlaceholder: "Rezept nach Namen suchen…",
+      themeDark: "Dunkel",
+      themeLight: "Hell",
+      tabAll: "Alle",
+      tabPinned: "⭐ Favoriten",
+      categories: {
+        "Logistics": "Logistik",
+        "Production": "Produktion",
+        "Intermediate products": "Zwischenprodukte",
+        "Combat": "Kampf",
+        "Fluids": "Flüssigkeiten"
+      },
+      recipesLabel: "Rezepte",
+      exportBtn: "Favoriten exportieren (JSON)",
+      importBtn: "Favoriten importieren (JSON)",
+      clearBtn: "Favoriten leeren",
+      emptyState: "Kein Rezept gefunden.",
+      ingredients: "Zutaten",
+      products: "Produkte",
+      pinOn: "Aus Favoriten entfernen",
+      pinOff: "Dieses Rezept anpinnen",
+      confirmClear: "Alle Favoriten löschen?",
+      invalidJson: "Ungültige JSON-Datei.",
+      exportFilename: "factorio-favoriten-rezepte.json",
+      footer: 'Rezeptdaten: Factorio 2.0 (Grundspiel, ohne die Erweiterung Space Age und ohne Forschungstechnologien) — 214 Rezepte, gegliedert nach den Kategorien des Spiels (Logistics, Production, Intermediate products, Combat, Fluids). Quelle: <a href="https://github.com/factoriolab/factoriolab" target="_blank" rel="noopener">factoriolab</a> (basierend auf den offiziellen Spieldateien). Favoriten werden automatisch im Browser gespeichert (localStorage) und können zusätzlich als JSON-Datei exportiert/importiert werden.'
+    },
+    es: {
+      searchPlaceholder: "Buscar receta por nombre…",
+      themeDark: "Oscuro",
+      themeLight: "Claro",
+      tabAll: "Todas",
+      tabPinned: "⭐ Favoritos",
+      categories: {
+        "Logistics": "Logística",
+        "Production": "Producción",
+        "Intermediate products": "Productos intermedios",
+        "Combat": "Combate",
+        "Fluids": "Fluidos"
+      },
+      recipesLabel: "recetas",
+      exportBtn: "Exportar favoritos (JSON)",
+      importBtn: "Importar favoritos (JSON)",
+      clearBtn: "Vaciar favoritos",
+      emptyState: "No se encontró ninguna receta.",
+      ingredients: "Ingredientes",
+      products: "Productos",
+      pinOn: "Quitar de favoritos",
+      pinOff: "Fijar esta receta",
+      confirmClear: "¿Vaciar todos los favoritos?",
+      invalidJson: "Archivo JSON no válido.",
+      exportFilename: "factorio-recetas-favoritas.json",
+      footer: 'Datos de recetas: Factorio 2.0 (juego base, excluye la expansión Space Age y las tecnologías de investigación) — 214 recetas agrupadas en las categorías propias del juego (Logistics, Production, Intermediate products, Combat, Fluids). Fuente: <a href="https://github.com/factoriolab/factoriolab" target="_blank" rel="noopener">factoriolab</a> (a su vez basado en los archivos oficiales del juego). Los favoritos se guardan automáticamente en el navegador (localStorage) y también se pueden exportar/importar como archivo JSON.'
+    },
+    fr: {
+      searchPlaceholder: "Rechercher une recette par nom…",
+      themeDark: "Sombre",
+      themeLight: "Clair",
+      tabAll: "Toutes",
+      tabPinned: "⭐ Favoris",
+      categories: {
+        "Logistics": "Logistique",
+        "Production": "Production",
+        "Intermediate products": "Produits intermédiaires",
+        "Combat": "Combat",
+        "Fluids": "Fluides"
+      },
+      recipesLabel: "recettes",
+      exportBtn: "Exporter les favoris (JSON)",
+      importBtn: "Importer les favoris (JSON)",
+      clearBtn: "Vider les favoris",
+      emptyState: "Aucune recette trouvée.",
+      ingredients: "Ingrédients",
+      products: "Produits",
+      pinOn: "Retirer des favoris",
+      pinOff: "Épingler cette recette",
+      confirmClear: "Vider tous les favoris ?",
+      invalidJson: "Fichier JSON invalide.",
+      exportFilename: "factorio-recettes-favorites.json",
+      footer: 'Données des recettes : Factorio 2.0 (jeu de base, hors extension Space Age et technologies de recherche) — 214 recettes regroupées selon les catégories du jeu (Logistics, Production, Intermediate products, Combat, Fluids). Source : <a href="https://github.com/factoriolab/factoriolab" target="_blank" rel="noopener">factoriolab</a> (elle-même basée sur les fichiers officiels du jeu). Les favoris sont enregistrés automatiquement dans le navigateur (localStorage) et peuvent aussi être exportés/importés sous forme de fichier JSON.'
+    }
+  };
+
+  function t(key) { return I18N[currentLang][key]; }
 
   // ---------- CSV parsing (handles simple quoting, just in case) ----------
   function parseCSV(text) {
@@ -695,35 +855,53 @@ crude-oil,Crude oil,Fluids,1,,Crude oil x10,pumpjack
   }
 
   // ---------- Theme ----------
+  let currentTheme = "dark";
   function applyTheme(theme) {
+    currentTheme = theme;
     document.documentElement.setAttribute("data-theme", theme);
-    const label = document.getElementById("theme-label");
-    const btn = document.getElementById("theme-toggle");
-    if (theme === "dark") {
-      label.textContent = "Scuro";
-      btn.firstChild.textContent = "🌙 ";
-    } else {
-      label.textContent = "Chiaro";
-      btn.firstChild.textContent = "☀️ ";
-    }
+    updateThemeLabel();
     localStorage.setItem(THEME_KEY, theme);
   }
 
+  function updateThemeLabel() {
+    const label = document.getElementById("theme-label");
+    const btn = document.getElementById("theme-toggle");
+    if (currentTheme === "dark") {
+      label.textContent = t("themeDark");
+      btn.firstChild.textContent = "🌙 ";
+    } else {
+      label.textContent = t("themeLight");
+      btn.firstChild.textContent = "☀️ ";
+    }
+  }
+
   document.getElementById("theme-toggle").addEventListener("click", () => {
-    const current = document.documentElement.getAttribute("data-theme");
-    applyTheme(current === "dark" ? "light" : "dark");
+    applyTheme(currentTheme === "dark" ? "light" : "dark");
+  });
+
+  // ---------- Language ----------
+  function applyLanguage(lang) {
+    currentLang = lang;
+    localStorage.setItem(LANG_KEY, lang);
+    document.documentElement.lang = lang;
+    document.getElementById("search").placeholder = t("searchPlaceholder");
+    document.getElementById("recipes-count-label").textContent = t("recipesLabel");
+    document.getElementById("export-label").textContent = t("exportBtn");
+    document.getElementById("import-label").textContent = t("importBtn");
+    document.getElementById("clear-label").textContent = t("clearBtn");
+    document.getElementById("empty-label").textContent = t("emptyState");
+    document.getElementById("footer-text").innerHTML = t("footer");
+    updateThemeLabel();
+    render();
+  }
+
+  document.getElementById("lang-select").addEventListener("change", (e) => {
+    applyLanguage(e.target.value);
   });
 
   // ---------- Tabs ----------
   function tabLabel(cat) {
-    const map = {
-      "Logistics": "Logistica",
-      "Production": "Produzione",
-      "Intermediate products": "Prodotti intermedi",
-      "Combat": "Combattimento",
-      "Fluids": "Fluidi"
-    };
-    return map[cat] || cat;
+    return t("categories")[cat] || cat;
   }
 
   function renderTabs() {
@@ -738,12 +916,12 @@ crude-oil,Crude oil,Fluids,1,,Crude oil x10,pumpjack
       return btn;
     };
 
-    tabsEl.appendChild(makeTab(ALL_TAB, "Tutte", recipes.length));
+    tabsEl.appendChild(makeTab(ALL_TAB, t("tabAll"), recipes.length));
     categories.forEach(cat => {
       const count = recipes.filter(r => r.categoria === cat).length;
       tabsEl.appendChild(makeTab(cat, tabLabel(cat), count));
     });
-    const pinTab = makeTab(PINNED_TAB, "⭐ Preferiti", pinned.size);
+    const pinTab = makeTab(PINNED_TAB, t("tabPinned"), pinned.size);
     tabsEl.appendChild(pinTab);
   }
 
@@ -845,7 +1023,7 @@ crude-oil,Crude oil,Fluids,1,,Crude oil x10,pumpjack
             ${titleIcon}
             <div class="card-title">${escapeHTML(r.nome)}</div>
           </div>
-          <button class="pin-btn ${isPinned ? "active" : ""}" title="${isPinned ? "Rimuovi dai preferiti" : "Pinna questa ricetta"}">
+          <button class="pin-btn ${isPinned ? "active" : ""}" title="${isPinned ? t("pinOn") : t("pinOff")}">
             ${pinIconSVG(isPinned)}
           </button>
         </div>
@@ -855,11 +1033,11 @@ crude-oil,Crude oil,Fluids,1,,Crude oil x10,pumpjack
         </div>
         <div class="flow">
           <div class="flow-section">
-            <div class="flow-label">Ingredienti</div>
+            <div class="flow-label">${t("ingredients")}</div>
             ${parseItemList(r.ingredienti).map(i => renderItemLine(i, false)).join("") || "<div class=\"item-line\">—</div>"}
           </div>
           <div class="flow-section">
-            <div class="flow-label"><span class="arrow">→</span> Prodotti</div>
+            <div class="flow-label"><span class="arrow">→</span> ${t("products")}</div>
             ${parseItemList(r.prodotti).map(i => renderItemLine(i, true)).join("")}
           </div>
           <div class="machines">🏭 ${escapeHTML(r.macchine || "—")}</div>
@@ -919,7 +1097,7 @@ crude-oil,Crude oil,Fluids,1,,Crude oil x10,pumpjack
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "factorio-ricette-preferite.json";
+    a.download = t("exportFilename");
     a.click();
     URL.revokeObjectURL(url);
   });
@@ -940,7 +1118,7 @@ crude-oil,Crude oil,Fluids,1,,Crude oil x10,pumpjack
         savePinned();
         render();
       } catch (err) {
-        alert("File JSON non valido.");
+        alert(t("invalidJson"));
       }
     };
     reader.readAsText(file);
@@ -949,7 +1127,7 @@ crude-oil,Crude oil,Fluids,1,,Crude oil x10,pumpjack
 
   document.getElementById("clear-btn").addEventListener("click", () => {
     if (pinned.size === 0) return;
-    if (confirm("Svuotare tutti i preferiti?")) {
+    if (confirm(t("confirmClear"))) {
       pinned.clear();
       savePinned();
       render();
@@ -958,6 +1136,8 @@ crude-oil,Crude oil,Fluids,1,,Crude oil x10,pumpjack
 
   // ---------- Init ----------
   applyTheme(localStorage.getItem(THEME_KEY) || "dark");
+  document.getElementById("lang-select").value = currentLang;
+  applyLanguage(currentLang);
   loadRecipes();
 })();
 </script>
